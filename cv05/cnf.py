@@ -1,164 +1,185 @@
-class VariableMap(object):
-    """ Mapovanie mien premennych na cisla.
+# na cviceni cislo 5 sme si ukazovali metodu ako pouzit kniznicu pickle ,
+#  ta vsak od pythnu 3.x robi s BytesIO a nie zo STringIo ako je v testoch
+# ,kniznica teda vyzdauje vyzaduje BytesIO ,aby to fungovalo staci prepisat v testoch na dvoch miestach
+# zo StringIO na BytesIO(riadok 103 a 105)
+#         oF = io.BytesIO()
+#         varMap.writeToFile(oF)
+#         iF = io.BytesIO(oF.getvalue())
+# po tejto zmene zbehnu vsetkky testy.. dakujem za pochopenie
 
-    Premennym vzdy priraduje suvisly usek cisel 1..n.
-    """
+import pickle
+
+class VariableMap:
     def __init__(self, variables = []):
-        """ Vytvori nove mapovanie, ktore bude obsahovat premenne z variables. """
-        pass
+        self.map = {}
+        self.max = 0
+        for v in variables:
+            self.addVar(v)
 
-    def addVar(self, var):
-        """ Prida premennu var.
-
-        Ak je uz v mape, nic sa nestane, ak nie prida ju s dalsim cislom v poradi.
-        Vrati referenciu na seba, aby sa dala zretazovat.
-        """
-        # prida premennu
+    def addVar(self, variable):
+        if not variable in self.map:
+            self.max += 1
+            self.map[variable] = self.max
         return self
+            
+    def __getitem__(self, variable):
+        return self.map[variable]
 
-    def get(self, var):
-        """ Vrati cislo priradene premennej var.
-
-        Vyhodi KeyError vynimku ak taka premenna nie je v mape.
-        """
-        return 1
-
-    def __getitem__(self, var):
-        """ Vrati cislo priradene premennej var.
-
-        Vyhodi KeyError vynimku ak taka premenna nie je v mape.
-        """
-        return 1
+    def get(self, variable):
+        return self.map[variable]
 
     def keys(self):
-        """ Vrati zoznam vsetkych premennych v mape. """
-        return []
+        return self.map.keys()
 
     def toString(self):
-        """ Vrati textovu reprezentaciu mapovania premennych.
-
-        Napriklad vo formate "{'a':1, 'b':2, ...}" alebo podobnom.
-        """
-        return ''
+        return str(self.map)
 
     def reverse(self):
-        """ Vrati reverzne mapovanie ako jednoduchy slovnik z cisel na mena premennych. """
-        return {1: 'a'}
-
+        r = {}
+        for k,v in self.map.items():
+            r[v] = k
+        return r
+    
     def writeToFile(self, outFile):
-        """ Zapise mapu do suboru outFile. """
-        pass
+        pickle.dump(self, outFile)
+
+        # zapisat tuto triedu do dakeho suboru
+
 
     @staticmethod
     def readFromFile(inFile):
-        """ Nacita novu mapu zo suboru inFile a vrati ju. """
-        varMap = VariableMap([])
-        # nacitame z inFile
-        #...
-        return varMap
 
+        return pickle.load(inFile)
+        #m = VariableMap([])
+        # nacitam do m
 
-
-class CnfLit(object):
-    """ Reprezentacia literalu (premenna alebo negovana premenna) v CNF formule. """
+        
+class CnfLit:
     def __init__(self, name):
-        """ Vytvori novy, kladny (nenegovany) literal pre premennu name. """
         self.name = name
         self.neg = False
 
     @staticmethod
     def Not(name):
-        """ Vytvory novy, negovany literal pre premennu name. """
-        return CnfLit('x')
+        r = CnfLit(name)
+        r.neg = True
+        return r
 
     def __neg__(self):
-        """ Vrati novy literal, ktory je negaciou tohoto. """
-        return CnfLit('x')
+        r = CnfLit(self.name)
+        r.neg = not self.neg
+        return r
 
     def toString(self):
-        """ Vrati textovu reprezentaciu tohoto literalu (vid zadanie). """
-        return ''
+        if self.neg :
+            return "-" + self.name
+        else:
+            return self.name
 
-    def eval(self, i):
-        """ Vrati ohodnotenie tohoto literalu pri interpretacii i. """
-        return False
+    def eval(self, interpretation):
+        if self.neg:
+            return not interpretation[self.name]
+        else:
+            return interpretation[self.name] 
 
     def extendVarMap(self, varMap):
-        """ Rozsiri varMap o premennu v tomto literali. """
-        pass
+        #doplna dany literal (self) do mapy v varMap(arita 1)
+        varMap.addVar(self.name)
+
+    def  writeToFile(self,outFile, varMap):
+        if self.neg:
+            outFile.write("-")
+        outFile.write(str(varMap[self.name]))
+        
+    # nemusi mat read
+class CnfClause(list):
+    def __init__(self, literals):
+        list.__init__(self,literals)
+
+    # to exxtendvarmapr preiturej cez kazdy literal a zapisem ho do varmapy
+    # Clausa je disjunkcia cize def eval bude pravda ak aspon n
+    def toString(self):
+        # final = ""
+        # for lit in self:
+        #     final
+        return " ".join([lit.toString() for lit in self])
+
+    def eval(self, interpretation):
+        return any([x.eval(interpretation) for x in self])
+        # for each in self:
+        #     if each.eval(interpretation):
+        #         return True
+        # else:
+        #     return False
+
+    def extendVarMap(self, varMap):
+        for lit in self:
+            lit.extendVarMap(varMap)
 
     def writeToFile(self, outFile, varMap):
-        """ Zapise literal do suboru outFile s pouzitim mapovania premennych varMap. """
-        pass
-
-class CnfClause(list):
-    """ Reprezentacia klauzy (pole literalov). """
-    def __init__(self, vars = []):
-        """ Vytvori novu klauzu obsahujucu literaly literals. """
-        list.__init__(self, vars)
-
-    def toString(self):
-        """ Vrati textovu reprezentaciu tejto klauzy (vid zadanie). """
-        return ''
-
-    def eval(self, i):
-        """ Vrati ohodnotenie tejto klauzy pri interpretacii i. """
-        return False
-
-    def extendVarMap(self, varMap):
-        """ Rozsiri varMap o premenne v tejto klauze. """
-        pass
-
-    def writeToFile(self, oFile, varMap):
-        """ Zapise klauzu do suboru outFile v DIMACS formate
-            pricom pouzije varMap na zakodovanie premennych na cisla.
-
-        Klauzu zapise na jeden riadok (ukonceny znakom konca riadku).
-        """
-        pass
+        for lit in self:
+            lit.writeToFile(outFile, varMap)
+            outFile.write(" ")
+        outFile.write("0\n")
 
     @staticmethod
     def readFromFile(inFile, varMap):
-        """ Nacita novu klauzu zo suboru inFile a vrati ju ako vysledok.
+        reverseMap = varMap.reverse()
+        clause = CnfClause([])
+        line = inFile.readline()
+        numbers = [int(x) for x in line.split()]
+        if len(numbers) == 0 :
+            raise IOError("prazdny riadok")
+        if numbers[-1] != 0:
+            raise IOError("zly riadok")
 
-        Mozete predpokladat, ze klauza je samostatne na jednom riadku.
-
-        Ak sa z aktualneho riadku na vstupe neda nacitat korektna klauza,
-        vyhodi vynimku IOError.
-        """
-        return CnfClause([])
+        for n in numbers[:-1]:
+            name = reverseMap[abs(n)]
+            lit = CnfLit(name)
+            lit.neg = n < 0
+            clause.append(lit)
+        return clause
 
 class Cnf(list):
-    """ Reprezentacia Cnf formuly ako pola klauz. """
-    def __init__(self, clauses = []):
-        """ Vytvori novu Cnf formuly obsahujucu klauzy clauses. """
-        list.__init__(self, clauses)
-
-    def toString(self):
-        """ Vrati textovu reprezentaciu tejto formule (vid zadanie). """
-        return ''
-
-    def eval(self, i):
-        """ Vrati ohodnotenie tejto formule pri interpretacii i. """
-        return False
+    def __init__(self, literals):
+        list.__init__(self,literals)
 
     def extendVarMap(self, varMap):
-        """ Rozsiri varMap o premenne v tejto formule. """
-        pass
+        for clause in self:
+            clause.extendVarMap(varMap)
 
-    def writeToFile(self, oFile, varMap):
-        """ Zapise klauzu do suboru outFile v DIMACS formate
-            pricom pouzije varMap na zakodovanie premennych na cisla a
-            zapise kazdu klauzu na jeden riadok.
-        """
-        pass
+    def toString(self):
+        string = ""
+        for vyraz in self:
+            string += vyraz.toString()
+            string += "\n"
+        return  string
 
+    def writeToFile(self, outFile, varMap):
+        for clause in self:
+            clause.writeToFile(outFile, varMap)
+
+    def eval(self, interpretation):
+        return all([ x.eval(interpretation) for x in self])
+
+    # ma to byt list CnfClause  stym ze citat budem takym spsoboom ze bude citat
+    #podobne ako CnfClause az pokym to nepadne ...  Try ; except ;
     @staticmethod
     def readFromFile(inFile, varMap):
-        """ Nacita novu formulu zo suboru inFile a vrati ju ako vysledok.
+        cnf = Cnf([])
+        try:
+            while(True):
+                temp = CnfClause.readFromFile(inFile, varMap)
+                cnf.append(temp)
+        except IOError:
+            pass
+        return cnf
 
-        Mozete predpokladat, ze kazda klauza je samostatne na jednom riadku.
-        """
-        return Cnf([])
 
-# vim: set sw=4 ts=4 sts=4 et :
+                   
+if __name__ == "__main__":
+    cnf = VariableMap(["a"])
+    print( cnf.keys ())
+    lit = CnfLit('a')
+    list_cnf = CnfClause([CnfLit('a')])
+    print(list_cnf)
